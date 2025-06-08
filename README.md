@@ -69,7 +69,7 @@ Structure of [**`/data/DATABASE`**](DATABASE):
 
 Structure of [**`/scripts`**](scripts) folder:
 ```
-scripts
+/scripts
 ┝━━ Module1-LLM-DrivenRuleBuilder/
 ┝━━ Module2-CodeAligner/
 ┝━━ Module3-ErrorLocator/
@@ -156,7 +156,7 @@ cd scripts/Module2-CodeAligner
 python run.py \
 --source_lang source-programming-language \
 --target_lang target-programming-language \
---target_model_name name_of_the_target_translator_such_as_TransCoder_TransCoderST_Codex_Qwen2.5-Coder-32B-Instruct-data \
+--target_model_name one_of_TransCoder_TransCoderST_Codex_Qwen2.5-Coder-32B-Instruct-data \
 --model_name qwen2.5-coder-32b-instruct \
 --path_to_code path/to/DATABASE/DATA/CODE \
 --path_to_save_map_for_line path/to/save/maps/for/lines \
@@ -264,7 +264,7 @@ cd scripts/Module2-CodeAligner
 python run.py \
 --source_lang source-programming-language \
 --target_lang target-programming-language \
---target_model_name name_of_the_target_translator_such_as_TransCoder_TransCoderST_Codex_Qwen2.5-Coder-32B-Instruct-data \
+--target_model_name one_of_TransCoder_TransCoderST_Codex_Qwen2.5-Coder-32B-Instruct-data \
 --model_name qwen2.5-coder-32b-instruct \
 --path_to_code path/to/CODE-roundX \
 --path_to_save_map_for_line path/to/save/maps/for/lines \
@@ -338,7 +338,7 @@ python step6-collect_unfix.py \
 --path_to_DATABASE path/to/DATABASE
   ```
 
-## Follow these steps to reproduce evaluation results in RQ1, RQ2, RQ3, and RQ4.
+## Follow these steps to reproduce evaluation results of RQ1, RQ2, RQ3, and RQ4.
 
 ### 1. RQ1: How does RulER compare to existing methods for constructing code alignments?
 
@@ -358,11 +358,11 @@ cd scripts/RQ2
 python evaluate.py
   ```
 
-### 3. RQ2 and RQ3: Effectiveness of RulER and existing methods for repairing semantic errors?
+### 3. RQ3 and RQ4: Effectiveness of RulER and existing methods for repairing semantic errors?
 
-**RQ2:** How does RulER compare to BatFix for repairing semantic errors?
+**RQ3:** How does RulER compare to BatFix for repairing semantic errors?
 
-**RQ3:** How does the Mined Rule-Driven Patch Generator module compare to LLM for generating repair patches?
+**RQ4:** How does the Mined Rule-Driven Patch Generator module compare to LLM for generating repair patches?
 
 Execute below instructions to generate evaluation results of RQ3 and RQ4.
 
