@@ -1,259 +1,382 @@
-import os
-import copy
-import nltk
+from utils import *
+import time
 import argparse
-from strsimpy.levenshtein import Levenshtein
-from strsimpy.longest_common_subsequence import LongestCommonSubsequence
-from strsimpy.normalized_levenshtein import NormalizedLevenshtein
-levenshtein = Levenshtein()
-lcs = LongestCommonSubsequence()
-normalized_levenshtein = NormalizedLevenshtein()
 
 
-def loadMap(path):
-    files = os.listdir(path)
-    map = {}
-    for file in files:
-        f = open(f'{path}/{file}')
-        lines = f.readlines()
-        f.close()
-        ID = file.split('.')[0]
-        map[ID] = []
-        for line in lines:
-            if line.strip():
-                map[ID].append([line.strip().split(';')[0], line.strip().split(';')[1]])
-    return map
-
-
-def read_code(file_path, lang):
-    f = open(file_path)
-    lines = f.readlines()
-    filter_lines = []
-    if lang == 'Java':
-        for line in lines:
-            this_line = copy.deepcopy(line)
-            if line.strip().startswith('return int ('):
-                this_line = this_line.replace('return int (', 'return ( int ) (')
-            if line.strip().endswith(';') and line.count('return ( int ) ') == 1 and line.count('return ( int ) (') == 0:
-                this_line = this_line.replace('return ( int ) ', 'return ( int ) ( ')
-                this_line = this_line.replace(';', ') ;')
-            if '= int ( ' in line:
-                this_line = this_line.replace('= int ( ', '= ( int ) ( ')
-            filter_lines.append(this_line)
-    elif lang == 'Python':
-        for line in lines:
-            this_line = copy.deepcopy(line)
-            if line.strip().startswith('return int ('):
-                this_line = this_line.replace('return int (', 'return ( int ) (')
-            if line.count('return ( int ) ') == 1 and line.count('return ( int ) (') == 0:
-                this_line = this_line.replace('return ( int ) ', 'return ( int ) ( ')
-                this_line = this_line + ' )'
-            if '= int ( ' in line:
-                this_line = this_line.replace('= int ( ', '= ( int ) ( ')
-            if line.strip().startswith('if (') and line.strip().endswith(') :'):
-                this_line = this_line.replace('if (', 'if')
-                this_line = this_line.replace(') :', ':')
-            if line.strip().startswith('while (') and line.strip().endswith(') :'):
-                this_line = this_line.replace('while (', 'while')
-                this_line = this_line.replace(') :', ':')
-            filter_lines.append(this_line)
-    elif lang == 'C++':
-        for line in lines:
-            this_line = copy.deepcopy(line)
-            if line.strip().startswith('return int ('):
-                this_line = this_line.replace('return int (', 'return ( int ) (')
-            if 'std :: ' in line:
-                this_line = this_line.replace('std :: ', '')
-            if line.strip().endswith(';') and line.count('return ( int ) ') == 1 and line.count('return ( int ) (') == 0:
-                this_line = this_line.replace('return ( int ) ', 'return ( int ) ( ')
-                this_line = this_line.replace(';', ') ;')
-            if '= int ( ' in line:
-                this_line = this_line.replace('= int ( ', '= ( int ) ( ')
-            if line.strip().startswith('while ( ( ') and line.strip().endswith(' ) ) {') and line.count('(') == 2:
-                this_line = this_line.replace('while ( ( ', 'while ( ')
-                this_line = this_line.replace(' ) ) {', ' ) {')
-            if line.strip().startswith('if ( ( ') and line.strip().endswith(' ) ) {') and line.count('(') == 2:
-                this_line = this_line.replace('if ( ( ', 'if ( ')
-                this_line = this_line.replace(' ) ) {', ' ) {')
-            filter_lines.append(this_line)
-    wholecode = ''.join(lines)
-    f.close()
-    return wholecode, filter_lines
-
-
-def run(path, target_model_name, source_lang, target_lang):
-    gt_map = loadMap(f'{path_to_DATABASE}/DATA/MAP/{target_model_name}-{source_lang}-{target_lang}-GT-mapping')
-    generated_map = loadMap(path)
+def run_wo_rule_synthesis(model_names_for_mining, target_model_name, source_lang, target_lang, task1_name, task2_name, code_dir, transcode_dir, transcode_script_dir):
     extensions = {'Python': 'py', 'C++': 'cpp', 'Java': 'java'}
     source_ext = extensions[source_lang]
     target_ext = extensions[target_lang]
-    ID2label = {}
-    f_IDlabel = open(f'{path_to_DATABASE}/DATA/BUG/{target_model_name}-{source_lang}-{target_lang}.txt')
-    lines = f_IDlabel.readlines()
-    for line in lines:
-        items = line.split('|')
-        ID2label[items[0]] = []
-        for item in items[1:]:
-            ID2label[items[0]].append(int(item))
-    script_dir = f'{path_to_DATABASE}/DATA/CODE/{target_model_name}-data/{source_lang}-{target_lang}-{target_lang}-script-for-trace'
-    code_files = os.listdir(script_dir)
-    code_dir = f'{path_to_DATABASE}/DATA/CODE/{target_model_name}-data/{source_lang}'
-    transcode_dir = f'{path_to_DATABASE}/DATA/CODE/{target_model_name}-data/{source_lang}-{target_lang}'
-    IDs = [code_file.split('.')[0] for code_file in code_files if code_file.split('.')[0] in ID2label]
+    code_files = os.listdir(transcode_script_dir)
+
+    IDs = [code_file.split('.')[0] for code_file in code_files]
     IDs.sort()
-    total = 0
-    total_gt = 0
-    right = 0
-    wrong = 0
-    correct_sim_list = []
-    wrong_sim_list = []
-    for ID in IDs:
+
+    existing_maps_files_number = [int(file.split('.')[-2].split('-')[-1])
+                                  for file in os.listdir(f'{task1_name}/')
+                                  if file.startswith(f'{"_".join(model_names_for_mining)}-{source_lang}-{target_lang}-maps-')
+                                  and file.split('.')[-1] == 'txt']
+    max_loop = max(existing_maps_files_number)
+    maps2trees = load_maps2trees(task1_name)
+    maps = load_map_for_locate(f'{task1_name}/{"_".join(model_names_for_mining)}-{source_lang}-{target_lang}-maps-{max_loop}.txt')
+    path2pair = load_path2pair(task1_name, source_lang, target_lang, max_loop)
+    source_path2tree = {}
+    trans_path2tree = {}
+    for k, v_lists in maps.items():
+        for v_list in v_lists:
+            this_map_trees = maps2trees[k + '>>>>' + '####'.join(v_list)]
+            k_tree = this_map_trees[0]
+            v_trees = this_map_trees[1]
+            if k_tree not in source_path2tree:
+                source_path2tree[k] = k_tree
+            for v, v_tree in zip(v_list, v_trees):
+                if v not in trans_path2tree:
+                    trans_path2tree[v] = v_tree
+
+
+    inverse_existing_maps_files_number = [int(file.split('.')[-2].split('-')[-1])
+                                          for file in os.listdir(f'{task2_name}/')
+                                          if file.startswith(f'{"_".join(model_names_for_mining)}-{target_lang}-{source_lang}-maps-')
+                                          and file.split('.')[-1] == 'txt']
+    inverse_max_loop = max(inverse_existing_maps_files_number)
+
+    inverse_maps2trees = load_maps2trees(task2_name)
+    inverse_maps = load_map_for_locate(f'{task2_name}/{"_".join(model_names_for_mining)}-{target_lang}-{source_lang}-maps-{inverse_max_loop}.txt')
+    inverse_path2pair = load_path2pair(task2_name, target_lang, source_lang, inverse_max_loop)
+    inverse_source_path2tree = {}
+    inverse_trans_path2tree = {}
+    for k, v_lists in inverse_maps.items():
+        for v_list in v_lists:
+            this_map_trees = inverse_maps2trees[k + '>>>>' + '####'.join(v_list)]
+            k_tree = this_map_trees[0]
+            v_trees = this_map_trees[1]
+            if k_tree not in inverse_source_path2tree:
+                inverse_source_path2tree[k] = k_tree
+            for v, v_tree in zip(v_list, v_trees):
+                if v not in inverse_trans_path2tree:
+                    inverse_trans_path2tree[v] = v_tree
+
+    root_node2map = {}
+    for k, v in path2pair.items():
+        if '||||' in k:
+            this_k = k.split('||||')[0]
+        else:
+            this_k = k
+        if this_k not in root_node2map:
+            root_node2map[this_k] = v[:]
+        else:
+            root_node2map[this_k].extend(v)
+
+    inverse_root_node2map = {}
+    for k, v in inverse_path2pair.items():
+        if '||||' in k:
+            this_k = k.split('||||')[0]
+        else:
+            this_k = k
+        if this_k not in inverse_root_node2map:
+            inverse_root_node2map[this_k] = v[:]
+        else:
+            inverse_root_node2map[this_k].extend(v)
+
+    sum = 0
+    count1 = 0
+    count2 = 0
+    count3 = 0
+    count4 = 0
+    for ID in IDs[:]:
+        sum += 1
         _, source_lines = read_code(f'{code_dir}/{ID}.{source_ext}', source_lang)
         _, trans_lines = read_code(f'{transcode_dir}/{ID}.{target_ext}', target_lang)
-        for pair in gt_map[ID]:
-            total_gt += 1
-        if ID in generated_map:
-            this_wrong = []
-            for pair in generated_map[ID]:
-                if int(pair[0]) < len(source_lines) and source_lines[int(pair[0])].strip() in ['{', '}'] \
-                        and int(pair[1]) < len(trans_lines) and trans_lines[int(pair[1])].strip() == source_lines[int(pair[0])].strip():
-                    continue
-                total += 1
-                if pair not in gt_map[ID]:
-                    try:
-                        score = nltk.translate.bleu_score.sentence_bleu([source_lines[int(pair[0])].strip()], trans_lines[int(pair[1])].strip(), weights=(0.5, 0.5))
-                        wrong_sim_list.append(score)
-                    except:
-                        None
-                    wrong += 1
-                    this_wrong.append(pair)
-                else:
-                    try:
-                        score = nltk.translate.bleu_score.sentence_bleu([source_lines[int(pair[0])].strip()], trans_lines[int(pair[1])].strip(), weights=(0.5, 0.5))
-                        correct_sim_list.append(score)
-                    except:
-                        None
-                    right += 1
-    precision = round(right/(right + wrong), 3)
-    recall = round(right/total_gt, 3)
-    f1 = round((2 * precision * recall) / (precision + recall), 3)
+        source_tree, source_varilable_names = code_parse_for_map(source_lang, source_lines)
+        trans_tree, trans_varilable_names = code_parse_for_map(target_lang, trans_lines)
+        source_stmt_list = []
+        this_source_path2tree = {}
+        source_stmt_list_pos = []
+        trans_stmt_list = []
+        this_trans_path2tree = {}
+        trans_stmt_list_pos = []
+        if source_lang == 'Java':
+            this_source_lines = copy.deepcopy(source_lines)
+            this_source_lines.insert(0, 'public class ClassName{\n')
+            this_source_lines.append('}\n')
+            ori_source_stmt_info_lists = traverse_tree(source_tree, source_lang, this_source_lines, source_varilable_names, only_block=False, exclude_last_child=False, only_path=True, fun_block=0, mine=False)
+            ori_source_stmt_info_lists = reduce_pos_of_java_tree(ori_source_stmt_info_lists)
+            source_stmt_list, source_stmt_list_depth, this_source_trees, this_source_path2tree, source_stmt_list_pos, _ = filter_traverse_tree_paths(ori_source_stmt_info_lists)
+        elif source_lang == 'Python':
+            ori_source_stmt_info_lists = traverse_tree(source_tree.root_node, source_lang, source_lines, source_varilable_names, only_block=False, exclude_last_child=False, only_path=True, fun_block=0, mine=True)
+            source_stmt_list, source_stmt_list_depth, this_source_trees, this_source_path2tree, source_stmt_list_pos, _ = filter_traverse_tree_paths(ori_source_stmt_info_lists)
+        elif source_lang == 'C++':
+            ori_source_stmt_info_lists = traverse_tree(source_tree.root_node, source_lang, source_lines, source_varilable_names, only_block=False, exclude_last_child=False, only_path=True, fun_block=0, mine=False)
+            source_stmt_list, source_stmt_list_depth, this_source_trees, this_source_path2tree, source_stmt_list_pos, _ = filter_traverse_tree_paths(ori_source_stmt_info_lists)
 
-    print(f'{target_model_name}-{source_lang}-{target_lang}')
-    print('N_gen:', total)
-    print('TP:', right)
-    print('FP:', wrong)
-    print('TP+FN:', total_gt)
-    print('Precision:', precision)
-    print('Recall:', recall)
-    print('F1:', f1)
-    print('')
-    return correct_sim_list, wrong_sim_list, precision, recall, f1
+        if target_lang == 'Java':
+            this_trans_lines = copy.deepcopy(trans_lines)
+            this_trans_lines.insert(0, 'public class ClassName{\n')
+            this_trans_lines.append('}\n')
+            ori_trans_stmt_info_lists = traverse_tree(trans_tree.root_node, target_lang, this_trans_lines, trans_varilable_names, only_block=False, exclude_last_child=False, only_path=True, fun_block=0, mine=False)
+            ori_trans_stmt_info_lists = reduce_pos_of_java_tree(ori_trans_stmt_info_lists)
+            trans_stmt_list, trans_stmt_list_depth, this_trans_trees, this_trans_path2tree, trans_stmt_list_pos, _ = filter_traverse_tree_paths(ori_trans_stmt_info_lists)
+        elif target_lang == 'Python':
+            ori_trans_stmt_info_lists = traverse_tree(trans_tree.root_node, target_lang, trans_lines, trans_varilable_names, only_block=False, exclude_last_child=False, only_path=True, fun_block=0, mine=True)
+            trans_stmt_list, trans_stmt_list_depth, this_trans_trees, this_trans_path2tree, trans_stmt_list_pos, _ = filter_traverse_tree_paths(ori_trans_stmt_info_lists)
+        elif target_lang == 'C++':
+            ori_trans_stmt_info_lists = traverse_tree(trans_tree.root_node, target_lang, trans_lines, trans_varilable_names, only_block=False, exclude_last_child=False, only_path=True, fun_block=0, mine=False)
+            trans_stmt_list, trans_stmt_list_depth, this_trans_trees, this_trans_path2tree, trans_stmt_list_pos, _ = filter_traverse_tree_paths(ori_trans_stmt_info_lists)
 
+        source_stmt_list, source_stmt_list_depth, this_source_trees, this_source_path2tree, source_stmt_list_pos = rephrase_stmt_trees(source_lang, source_stmt_list, source_stmt_list_depth, this_source_trees, this_source_path2tree, source_stmt_list_pos, source_lines)
+        trans_stmt_list, trans_stmt_list_depth, this_trans_trees, this_trans_path2tree, trans_stmt_list_pos = rephrase_stmt_trees(target_lang, trans_stmt_list, trans_stmt_list_depth, this_trans_trees, this_trans_path2tree, trans_stmt_list_pos, trans_lines)
 
-def calculate(all_sim, k):
-    nums = [round(i*(1/k), 2) for i in range(k)]
-    nums.append(1.0)
-
-    count = [0 for _ in range(len(nums)-1)]
-    for item in all_sim['correct_map']:
-        for val_id, val in enumerate(nums[:-1]):
-            if val_id == 0:
-                if val <= item and item <= nums[val_id+1]:
-                    count[val_id] += 1
-                    break
+        source_stmt2mapping = {}
+        for ori_id, ori_path in enumerate(source_stmt_list):
+            if ori_id == 0:
+                continue
+            ori_code = this_source_trees[ori_id].text
+            possible_maps_list = match(this_source_path2tree[ori_path], [], source_lang, target_lang, maps, trans_path2tree)
+            if possible_maps_list:
+                count1 += 1
+                source_stmt2mapping[ori_path] = possible_maps_list
             else:
-                if val < item and item <= nums[val_id+1]:
-                    count[val_id] += 1
-                    break
+                count2 += 1
+                source_stmt2mapping[ori_path] = []
 
-    return count
+        trans_stmt2mapping = {}
+        for ori_id, ori_path in enumerate(trans_stmt_list):
+            if ori_id == 0:
+                continue
+            ori_code = this_trans_trees[ori_id].text
+            possible_maps_list = match(this_trans_path2tree[ori_path], [], target_lang, source_lang, inverse_maps, source_path2tree)
+            if possible_maps_list:
+                count3 += 1
+                trans_stmt2mapping[ori_path] = possible_maps_list
+            else:
+                count4 += 1
+                trans_stmt2mapping[ori_path] = []
+
+    return count1, count2, round(count1 / (count1 + count2), 4), count3, count4, round(count3 / (count3 + count4), 4)
+
+
+def run_w_rule_synthesis(model_names_for_mining, target_model_name, source_lang, target_lang, task1_name, task2_name, code_dir, transcode_dir, transcode_script_dir):
+    extensions = {'Python': 'py', 'C++': 'cpp', 'Java': 'java'}
+    source_ext = extensions[source_lang]
+    target_ext = extensions[target_lang]
+    code_files = os.listdir(transcode_script_dir)
+
+    IDs = [code_file.split('.')[0] for code_file in code_files]
+    IDs.sort()
+
+    existing_maps_files_number = [int(file.split('.')[-2].split('-')[-1])
+                                  for file in os.listdir(f'{task1_name}/')
+                                  if file.startswith(f'{"_".join(model_names_for_mining)}-{source_lang}-{target_lang}-maps-')
+                                  and file.split('.')[-1] == 'txt']
+    max_loop = max(existing_maps_files_number)
+    maps2trees = load_maps2trees(task1_name)
+    maps = load_map_for_locate(f'{task1_name}/{"_".join(model_names_for_mining)}-{source_lang}-{target_lang}-maps-{max_loop}.txt')
+    path2pair = load_path2pair(task1_name, source_lang, target_lang, max_loop)
+    source_path2tree = {}
+    trans_path2tree = {}
+    for k, v_lists in maps.items():
+        for v_list in v_lists:
+            this_map_trees = maps2trees[k + '>>>>' + '####'.join(v_list)]
+            k_tree = this_map_trees[0]
+            v_trees = this_map_trees[1]
+            if k_tree not in source_path2tree:
+                source_path2tree[k] = k_tree
+            for v, v_tree in zip(v_list, v_trees):
+                if v not in trans_path2tree:
+                    trans_path2tree[v] = v_tree
+
+
+    inverse_existing_maps_files_number = [int(file.split('.')[-2].split('-')[-1])
+                                          for file in os.listdir(f'{task2_name}/')
+                                          if file.startswith(f'{"_".join(model_names_for_mining)}-{target_lang}-{source_lang}-maps-')
+                                          and file.split('.')[-1] == 'txt']
+    inverse_max_loop = max(inverse_existing_maps_files_number)
+
+    inverse_maps2trees = load_maps2trees(task2_name)
+    inverse_maps = load_map_for_locate(f'{task2_name}/{"_".join(model_names_for_mining)}-{target_lang}-{source_lang}-maps-{inverse_max_loop}.txt')
+    inverse_path2pair = load_path2pair(task2_name, target_lang, source_lang, inverse_max_loop)
+    inverse_source_path2tree = {}
+    inverse_trans_path2tree = {}
+    for k, v_lists in inverse_maps.items():
+        for v_list in v_lists:
+            this_map_trees = inverse_maps2trees[k + '>>>>' + '####'.join(v_list)]
+            k_tree = this_map_trees[0]
+            v_trees = this_map_trees[1]
+            if k_tree not in inverse_source_path2tree:
+                inverse_source_path2tree[k] = k_tree
+            for v, v_tree in zip(v_list, v_trees):
+                if v not in inverse_trans_path2tree:
+                    inverse_trans_path2tree[v] = v_tree
+
+    root_node2map = {}
+    for k, v in path2pair.items():
+        if '||||' in k:
+            this_k = k.split('||||')[0]
+        else:
+            this_k = k
+        if this_k not in root_node2map:
+            root_node2map[this_k] = v[:]
+        else:
+            root_node2map[this_k].extend(v)
+
+    inverse_root_node2map = {}
+    for k, v in inverse_path2pair.items():
+        if '||||' in k:
+            this_k = k.split('||||')[0]
+        else:
+            this_k = k
+        if this_k not in inverse_root_node2map:
+            inverse_root_node2map[this_k] = v[:]
+        else:
+            inverse_root_node2map[this_k].extend(v)
+
+    sum = 0
+    count1 = 0
+    count2 = 0
+    count3 = 0
+    count4 = 0
+    for ID in IDs[:]:
+        sum += 1
+        _, source_lines = read_code(f'{code_dir}/{ID}.{source_ext}', source_lang)
+        _, trans_lines = read_code(f'{transcode_dir}/{ID}.{target_ext}', target_lang)
+        source_tree, source_varilable_names = code_parse_for_map(source_lang, source_lines)
+        trans_tree, trans_varilable_names = code_parse_for_map(target_lang, trans_lines)
+        source_stmt_list = []
+        this_source_path2tree = {}
+        source_stmt_list_pos = []
+        trans_stmt_list = []
+        this_trans_path2tree = {}
+        trans_stmt_list_pos = []
+        if source_lang == 'Java':
+            this_source_lines = copy.deepcopy(source_lines)
+            this_source_lines.insert(0, 'public class ClassName{\n')
+            this_source_lines.append('}\n')
+            ori_source_stmt_info_lists = traverse_tree(source_tree, source_lang, this_source_lines, source_varilable_names, only_block=False, exclude_last_child=False, only_path=True, fun_block=0, mine=False)
+            ori_source_stmt_info_lists = reduce_pos_of_java_tree(ori_source_stmt_info_lists)
+            source_stmt_list, source_stmt_list_depth, this_source_trees, this_source_path2tree, source_stmt_list_pos, _ = filter_traverse_tree_paths(ori_source_stmt_info_lists)
+        elif source_lang == 'Python':
+            ori_source_stmt_info_lists = traverse_tree(source_tree.root_node, source_lang, source_lines, source_varilable_names, only_block=False, exclude_last_child=False, only_path=True, fun_block=0, mine=True)
+            source_stmt_list, source_stmt_list_depth, this_source_trees, this_source_path2tree, source_stmt_list_pos, _ = filter_traverse_tree_paths(ori_source_stmt_info_lists)
+        elif source_lang == 'C++':
+            ori_source_stmt_info_lists = traverse_tree(source_tree.root_node, source_lang, source_lines, source_varilable_names, only_block=False, exclude_last_child=False, only_path=True, fun_block=0, mine=False)
+            source_stmt_list, source_stmt_list_depth, this_source_trees, this_source_path2tree, source_stmt_list_pos, _ = filter_traverse_tree_paths(ori_source_stmt_info_lists)
+
+        if target_lang == 'Java':
+            this_trans_lines = copy.deepcopy(trans_lines)
+            this_trans_lines.insert(0, 'public class ClassName{\n')
+            this_trans_lines.append('}\n')
+            ori_trans_stmt_info_lists = traverse_tree(trans_tree.root_node, target_lang, this_trans_lines, trans_varilable_names, only_block=False, exclude_last_child=False, only_path=True, fun_block=0, mine=False)
+            ori_trans_stmt_info_lists = reduce_pos_of_java_tree(ori_trans_stmt_info_lists)
+            trans_stmt_list, trans_stmt_list_depth, this_trans_trees, this_trans_path2tree, trans_stmt_list_pos, _ = filter_traverse_tree_paths(ori_trans_stmt_info_lists)
+        elif target_lang == 'Python':
+            ori_trans_stmt_info_lists = traverse_tree(trans_tree.root_node, target_lang, trans_lines, trans_varilable_names, only_block=False, exclude_last_child=False, only_path=True, fun_block=0, mine=True)
+            trans_stmt_list, trans_stmt_list_depth, this_trans_trees, this_trans_path2tree, trans_stmt_list_pos, _ = filter_traverse_tree_paths(ori_trans_stmt_info_lists)
+        elif target_lang == 'C++':
+            ori_trans_stmt_info_lists = traverse_tree(trans_tree.root_node, target_lang, trans_lines, trans_varilable_names, only_block=False, exclude_last_child=False, only_path=True, fun_block=0, mine=False)
+            trans_stmt_list, trans_stmt_list_depth, this_trans_trees, this_trans_path2tree, trans_stmt_list_pos, _ = filter_traverse_tree_paths(ori_trans_stmt_info_lists)
+
+        source_stmt_list, source_stmt_list_depth, this_source_trees, this_source_path2tree, source_stmt_list_pos = rephrase_stmt_trees(source_lang, source_stmt_list, source_stmt_list_depth, this_source_trees, this_source_path2tree, source_stmt_list_pos, source_lines)
+        trans_stmt_list, trans_stmt_list_depth, this_trans_trees, this_trans_path2tree, trans_stmt_list_pos = rephrase_stmt_trees(target_lang, trans_stmt_list, trans_stmt_list_depth, this_trans_trees, this_trans_path2tree, trans_stmt_list_pos, trans_lines)
+        
+        source_stmt2mapping = {}
+        for ori_id, ori_path in enumerate(source_stmt_list):
+            if ori_id == 0:
+                continue
+            ori_code = this_source_trees[ori_id].text
+            possible_maps_list = match(this_source_path2tree[ori_path], [], source_lang, target_lang, maps, trans_path2tree)
+            if not possible_maps_list:
+                search, search_result = check_new_rule(f'{task1_name}-new', ori_path)
+                possible_maps_list.extend(search_result)
+            if possible_maps_list:
+                count1 += 1
+                source_stmt2mapping[ori_path] = possible_maps_list
+            else:
+                count2 += 1
+                source_stmt2mapping[ori_path] = []
+
+        trans_stmt2mapping = {}
+        for ori_id, ori_path in enumerate(trans_stmt_list):
+            if ori_id == 0:
+                continue
+            ori_code = this_trans_trees[ori_id].text
+            possible_maps_list = match(this_trans_path2tree[ori_path], [], target_lang, source_lang, inverse_maps, source_path2tree)
+            if not possible_maps_list:
+                search, search_result = check_new_rule(f'{task2_name}-new', ori_path)
+                possible_maps_list.extend(search_result)
+            if possible_maps_list:
+                count3 += 1
+                trans_stmt2mapping[ori_path] = possible_maps_list
+            else:
+                count4 += 1
+                trans_stmt2mapping[ori_path] = []
+
+    return count1, count2, round(count1 / (count1 + count2), 4), count3, count4, round(count3 / (count3 + count4), 4)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
+        "--path_to_code",
+        default='DATABASE/DATA/CODE',
+        type=str,
+        required=False,
+        help=""
+    )
+    parser.add_argument(
         "--path_to_DATABASE",
-        default='/DATABASE',
+        default='DATABASE',
         type=str,
         required=False,
         help=""
     )
     args = parser.parse_args()
+    target_lang ='C++'
+    model_names_for_mining = ['qwen2.5-coder-32b-instruct']
+    path_to_code = args.path_to_code
     path_to_DATABASE = args.path_to_DATABASE
 
-    data_collect = []
-    methods = ['BatFix', 'TransMap', 'RulER', 'GT']
-    target_model_names = ['TransCoder', 'TransCoderST', 'Codex', 'Qwen2.5-Coder-32B-Instruct']
-    precisions = {'BatFix':[], 'TransMap':[], 'RulER':[], 'GT':[]}
-    recalls = {'BatFix':[], 'TransMap':[], 'RulER':[], 'GT':[]}
-    f1s = {'BatFix':[], 'TransMap':[], 'RulER':[], 'GT':[]}
-    source_langs = ['Java']
-    target_lang = 'C++'
-    all_sim_java = {'BatFix': {'correct_map': [], 'wrong_map': []}, 'TransMap': {'correct_map': [], 'wrong_map': []}, 'RulER': {'correct_map': [], 'wrong_map': []}, 'GT': {'correct_map': [], 'wrong_map': []}}
-    for target_model_name in target_model_names:
-        for source_lang in source_langs:
-            for method_id, path in enumerate([f'BatFix_map/{target_model_name}-{source_lang}-{target_lang}-Batfix-mapping',
-                                              f'TransMap_map/{target_model_name}/{source_lang}-{target_lang}',
-                                              f'RulER_map/{target_model_name}-{source_lang}-{target_lang}-Ours-mapping',
-                                              f'{path_to_DATABASE}/DATA/MAP/{target_model_name}-{source_lang}-{target_lang}-GT-mapping']):
-                print(f'{methods[method_id]}-{source_lang}-{target_lang}')
-                correct_sim_list, wrong_sim_list, precision, recall, f1 = run(path, target_model_name, source_lang, target_lang)
-                precisions[methods[method_id]].append(precision)
-                f1s[methods[method_id]].append(f1)
-                recalls[methods[method_id]].append(recall)
-                all_sim_java[methods[method_id]]['correct_map'].extend(correct_sim_list)
-                all_sim_java[methods[method_id]]['wrong_map'].extend(wrong_sim_list)
+    all_count1_w = 0
+    all_count2_w = 0
+    all_count1_wo = 0
+    all_count2_wo = 0
+    for source_lang in ['Java', 'Python']:
+        count1_w = 0
+        count2_w = 0
+        count3_w = 0
+        count4_w = 0
+        count1_wo = 0
+        count2_wo = 0
+        count3_wo = 0
+        count4_wo = 0
+        for target_model_name in ['TransCoder', 'TransCoderST', 'Codex', 'Qwen2.5-Coder-32B-Instruct']:
+            task1_name = f'{path_to_DATABASE}/task-{5000}-{"_".join(model_names_for_mining)}-CodeNet-{source_lang}-{target_lang}'
+            task2_name = f'{path_to_DATABASE}/task-{5000}-{"_".join(model_names_for_mining)}-CodeNet-{target_lang}-{source_lang}'
+            code_dir = f'{path_to_code}/{target_model_name}-data/{source_lang}'
+            transcode_dir = f'{path_to_code}/{target_model_name}-data/{source_lang}-{target_lang}'
+            transcode_script_dir = f'{path_to_code}/{target_model_name}-data/{source_lang}-{target_lang}-{target_lang}-script-for-trace'
+            w_count1, w_count2, w_count_rate_s_t, w_count3, w_count4, w_count_rate_t_s = run_w_rule_synthesis(model_names_for_mining, target_model_name, source_lang, target_lang, task1_name, task2_name, code_dir, transcode_dir, transcode_script_dir)
+            wo_count1, wo_count2, wo_count_rate_s_t, wo_count3, wo_count4, wo_count_rate_t_s = run_wo_rule_synthesis(model_names_for_mining, target_model_name, source_lang, target_lang, task1_name, task2_name, code_dir, transcode_dir, transcode_script_dir)
+            count1_w += w_count1
+            count2_w += w_count2
+            count3_w += w_count3
+            count4_w += w_count4
+            count1_wo += wo_count1
+            count2_wo += wo_count2
+            count3_wo += wo_count3
+            count4_wo += wo_count4
 
-    # precisions = {'BatFix':[], 'TransMap':[], 'RulER':[], 'GT':[]}
-    # recalls = {'BatFix':[], 'TransMap':[], 'RulER':[], 'GT':[]}
-    source_langs = ['Python']
-    target_lang = 'C++'
-    all_sim_py = {'BatFix': {'correct_map': [], 'wrong_map': []}, 'TransMap': {'correct_map': [], 'wrong_map': []}, 'RulER': {'correct_map': [], 'wrong_map': []}, 'GT': {'correct_map': [], 'wrong_map': []}}
-    for target_model_name in target_model_names:
-        for source_lang in source_langs:
-            for method_id, path in enumerate([f'BatFix_map/{target_model_name}-{source_lang}-{target_lang}-Batfix-mapping',
-                                              f'TransMap_map/{target_model_name}/{source_lang}-{target_lang}',
-                                              f'RulER_map/{target_model_name}-{source_lang}-{target_lang}-Ours-mapping',
-                                              f'{path_to_DATABASE}/DATA/MAP/{target_model_name}-{source_lang}-{target_lang}-GT-mapping']):
-                print(f'{methods[method_id]}-{source_lang}-{target_lang}')
-                correct_sim_list, wrong_sim_list, precision, recall, f1 = run(path, target_model_name, source_lang, target_lang)
-                precisions[methods[method_id]].append(precision)
-                recalls[methods[method_id]].append(recall)
-                f1s[methods[method_id]].append(f1)
-                all_sim_py[methods[method_id]]['correct_map'].extend(correct_sim_list)
-                all_sim_py[methods[method_id]]['wrong_map'].extend(wrong_sim_list)
-
-    for method in methods:
-        print(f'{method} average Precision: {sum(precisions[method])/len(precisions[method])}')
-        print(f'{method} average Recall: {sum(recalls[method])/len(recalls[method])}')
-        print(f'{method} average F1: {sum(recalls[method])/len(recalls[method])}')
-    print('')
-
-    print('Java-to-C++:')
-    print('\t'.join(['[0, 0.1]', '(0.1, 0.2]', '(0.2, 0.3]', '(0.3, 0.4]', '(0.4, 0.5]', '(0.5, 0.6]', '(0.6, 0.7]', '(0.7, 0.8]', '(0.8, 0.9]', '(0.9, 1]']))
-    count1 = calculate(all_sim_java['GT'], 10)
-    count = calculate(all_sim_java['BatFix'], 10)
-    print('BatFix', '\t'.join([str(round(item/item1, 2)) for item1, item in zip(count1, count)]))
-    count = calculate(all_sim_java['TransMap'], 10)
-    print('TransMap', '\t'.join([str(round(item/item1, 2)) for item1, item in zip(count1, count)]))
-    count = calculate(all_sim_java['RulER'], 10)
-    print('RulER', '\t'.join([str(round(item/item1, 2)) for item1, item in zip(count1, count)]))
-
-    print('\nPython-to-C++:')
-    print('\t'.join(['[0, 0.1]', '(0.1, 0.2]', '(0.2, 0.3]', '(0.3, 0.4]', '(0.4, 0.5]', '(0.5, 0.6]', '(0.6, 0.7]', '(0.7, 0.8]', '(0.8, 0.9]', '(0.9, 1]']))
-    count1 = calculate(all_sim_py['GT'], 10)
-    count = calculate(all_sim_py['BatFix'], 10)
-    print('BatFix', '\t'.join([str(round(item/item1, 2)) for item1, item in zip(count1, count)]))
-    count = calculate(all_sim_py['TransMap'], 10)
-    print('TransMap', '\t'.join([str(round(item/item1, 2)) for item1, item in zip(count1, count)]))
-    count = calculate(all_sim_py['RulER'], 10)
-    print('RulER', '\t'.join([str(round(item/item1, 2)) for item1, item in zip(count1, count)]))
-    print('')
-
-
-
-
-
-
-
+        all_count1_w += count1_w
+        all_count1_w += count3_w
+        all_count2_w += count2_w
+        all_count2_w += count4_w
+        all_count1_wo += count1_wo
+        all_count1_wo += count3_wo
+        all_count2_wo += count2_wo
+        all_count2_wo += count4_wo
+        print(f"\nC_stmt of RulER on {source_lang}-{target_lang} w.o. rule synthesis:{round(count1_wo / (count1_wo + count2_wo), 4)}")
+        print(f"C_stmt of RulER on {target_lang}-{source_lang} w.o. rule synthesis:{round(count3_wo / (count3_wo + count4_wo), 4)}")
+        print(f"C_stmt of RulER on {source_lang}-{target_lang} w. rule synthesis:{round(count1_w / (count1_w + count2_w), 4)}")
+        print(f"C_stmt of RulER on {target_lang}-{source_lang} w. rule synthesis:{round(count3_w / (count3_w + count4_w), 4)}")
+    print(f"\nAverage C_stmt of RulER on Java-{target_lang} w. rule synthesis:{round(all_count1_w / (all_count1_w + all_count2_w), 4)}")
+    print(f"Average C_stmt of RulER on Python-{target_lang} w.o. rule synthesis:{round(all_count1_wo / (all_count1_wo + all_count2_wo), 4)}")
 

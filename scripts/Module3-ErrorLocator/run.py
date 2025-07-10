@@ -2,24 +2,6 @@ from utils import *
 import argparse
 
 
-def logout(task_name, source_lang, target_lang, new_maps_count, this_new_map, source_path, trans_path, text1, text2, text3, text4, loop_time, source_path2, target_path2, source_tree2_text, target_tree2_text):
-    f = open(f'{task_name}/exp-{source_lang}-{target_lang}-expression-update-{loop_time+1}/{new_maps_count}.cpp', 'w')
-    print(source_path, file=f)
-    print('\n' + text1, file=f)
-    print('\n' + this_new_map[0], file=f)
-    print('\n' + text3 + '\n', file=f)
-    print('\n' + trans_path, file=f)
-    print('\n' + text2, file=f)
-    print('\n' + this_new_map[1][0], file=f)
-    print('\n' + text4, file=f)
-    print('\n' + '--------------------------', file=f)
-    print('\n' + source_path2, file=f)
-    print('\n' + source_tree2_text, file=f)
-    print('\n' + target_path2, file=f)
-    print('\n' + target_tree2_text, file=f)
-    f.close()
-
-
 def run(path_to_map, path_to_save_FL, path_to_label, path_to_code, path_to_DATABASE, target_model_name, source_lang, target_lang, model_name):
     generated_map = loadMap(f'{path_to_map}/{target_model_name}-{source_lang}-{target_lang}-Ours-mapping')
     save_FL_dir = f'{path_to_save_FL}/{target_model_name}-{source_lang}-{target_lang}-FL'

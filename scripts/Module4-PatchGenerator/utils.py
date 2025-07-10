@@ -1937,7 +1937,6 @@ def integrate_diff_id(match_diff_list):
 
 
 def match(ori_tree, ori_walk_path, source_lang, target_lang, maps, trans_path2tree):
-    print(ori_walk_path)
     ori_subtree = ori_tree.getChild(ori_walk_path)
     ori_subtree_path = '||||'.join(ori_subtree.getDFS(source_lang))
     # print(f"{color.BOLD}{depth}{color.END}")

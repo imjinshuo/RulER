@@ -39,8 +39,9 @@ This is the artifact for the paper "***RulER**: Automated Rule-Based Semantic Er
     tqdm==4.66.4
     tree_sitter==0.20.0
     ```
-- **Download Project_CodeNet.tar.gz from https://developer.ibm.com/data/project-codenet/ and unzip it.**
-- **Download DATABASE.zip from from https://drive.google.com/file/d/1JPtnvnBULlZpgd-1uHTUOZtfDo1DVpRq/view?usp=sharing and unzip it into **`/data/DATABASE`**.**
+- **Download `Project_CodeNet.tar.gz` from https://developer.ibm.com/data/project-codenet/ and unzip it.**
+- **Download `DATABASE.zip` from from https://drive.google.com/file/d/1xmFWP8sUp5-XxGMoXUoBSzzfhgE39cV7/view?usp=sharing and unzip it into **`/data/DATABASE`**.**
+- **Download `CodeNet_sourcefiles.zip` from from https://drive.google.com/file/d/1Pm_SdmeNP42whT-M40ZVQ35IMGXWONwz/view?usp=sharing and unzip it into **`/scripts/Module1-LLM-DrivenRuleBuilder/`**.**
 
 ## Dataset
 
@@ -76,7 +77,8 @@ Structure of [**`/scripts`**](scripts) folder:
 ┝━━ Module4-PatchGenerator/
 ┝━━ RQ1/
 ┝━━ RQ2/
-┝━━ RQ3&RQ4/
+┝━━ RQ3/
+┝━━ RQ4&RQ5/
 ┝━━ RunTrace/
 ┕━━ Test/
 ```
@@ -338,36 +340,49 @@ python step6-collect_unfix.py \
 --path_to_DATABASE path/to/DATABASE
   ```
 
-## Follow these steps to reproduce evaluation results of RQ1, RQ2, RQ3, and RQ4.
+## Follow these steps to reproduce evaluation results of Research Quesitons.
 
-### 1. RQ1: How does RulER compare to existing methods for constructing code alignments?
+### 1. RQ1: How effective are RulER-mined translation rules in covering the target code?
 
 Execute below instructions to generate evaluation results of RQ1.
 
   ```bash
 cd scripts/RQ1
-python evaluate.py
+python evaluate.py \
+--path_to_code path/to/DATABASE/DATA/CODE \
+--path_to_DATABASE path/to/DATABASE
   ```
 
-### 2. RQ2: How does RulER compare to existing methods for locating semantic errors?
+### 2. RQ2: How does RulER compare to existing methods for constructing code alignments?
 
 Execute below instructions to generate evaluation results of RQ2.
 
   ```bash
 cd scripts/RQ2
-python evaluate.py
+python evaluate.py \
+--path_to_DATABASE path/to/DATABASE
   ```
 
-### 3. RQ3 and RQ4: Effectiveness of RulER and existing methods for repairing semantic errors?
+### 3. RQ3: How does RulER compare to existing methods for locating semantic errors?
 
-**RQ3:** How does RulER compare to BatFix for repairing semantic errors?
-
-**RQ4:** How does the Mined Rule-Driven Patch Generator module compare to LLM for generating repair patches?
-
-Execute below instructions to generate evaluation results of RQ3 and RQ4.
+Execute below instructions to generate evaluation results of RQ3.
 
   ```bash
-cd scripts/RQ3&RQ4
+cd scripts/RQ3
+python evaluate.py \
+--path_to_DATABASE path/to/DATABASE
+  ```
+
+### 4. RQ4 and RQ5: Effectiveness of RulER and existing methods for repairing semantic errors?
+
+**RQ4:** How does RulER compare to BatFix for repairing semantic errors?
+
+**RQ5:** How does the Patch Generator module compare to LLM for generating repair patches?
+
+Execute below instructions to generate evaluation results of RQ4 and RQ5.
+
+  ```bash
+cd scripts/RQ4&RQ5
 python evaluate.py
   ```
 

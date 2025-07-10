@@ -4,24 +4,6 @@ import time
 import argparse
 
 
-def logout(task_name, source_lang, target_lang, new_maps_count, this_new_map, source_path, trans_path, text1, text2, text3, text4, loop_time, source_path2, target_path2, source_tree2_text, target_tree2_text):
-    f = open(f'{task_name}/exp-{source_lang}-{target_lang}-expression-update-{loop_time+1}/{new_maps_count}.cpp', 'w')
-    print(source_path, file=f)
-    print('\n' + text1, file=f)
-    print('\n' + this_new_map[0], file=f)
-    print('\n' + text3 + '\n', file=f)
-    print('\n' + trans_path, file=f)
-    print('\n' + text2, file=f)
-    print('\n' + this_new_map[1][0], file=f)
-    print('\n' + text4, file=f)
-    print('\n' + '--------------------------', file=f)
-    print('\n' + source_path2, file=f)
-    print('\n' + source_tree2_text, file=f)
-    print('\n' + target_path2, file=f)
-    print('\n' + target_tree2_text, file=f)
-    f.close()
-
-
 def run(model_names_for_mining, target_model_name, source_lang, target_lang, task1_name, task2_name, code_dir, transcode_dir, transcode_script_dir, path_to_save_map_for_line, path_to_save_map_for_statement):
     save_mapping_dir = f'{path_to_save_map_for_line}/{target_model_name}-{source_lang}-{target_lang}-Ours-mapping'
     os.makedirs(save_mapping_dir, exist_ok=True)
@@ -104,6 +86,10 @@ def run(model_names_for_mining, target_model_name, source_lang, target_lang, tas
             inverse_root_node2map[this_k].extend(v)
 
     sum = 0
+    count1 = 0
+    count2 = 0
+    count3 = 0
+    count4 = 0
     for ID in IDs[:]:
         sum += 1
         print(f"{color.BOLD}{color.GREEN}\n{sum}--{ID}{color.END}")
@@ -151,7 +137,10 @@ def run(model_names_for_mining, target_model_name, source_lang, target_lang, tas
         sourceline2stmt = line2stmt(source_stmt_list_pos)
         transline2stmt = line2stmt(trans_stmt_list_pos)
         source_stmt2mapping = {}
-        for ori_path in tqdm(source_stmt_list):
+        for ori_id, ori_path in tqdm(enumerate(source_stmt_list)):
+            if ori_id == 0:
+                continue
+            ori_code = this_source_trees[ori_id].text
             depth = 0
             max_depth = 1000000000
             max_possible_choices = 1000000000
@@ -171,12 +160,18 @@ def run(model_names_for_mining, target_model_name, source_lang, target_lang, tas
                     save_new_rule(f'{task1_name}-new', ori_path, possible_maps_force_list)
                 possible_maps_list.extend(possible_maps_force_list)
             if possible_maps_list:
+                count1 += 1
                 source_stmt2mapping[ori_path] = possible_maps_list
             else:
+                count2 += 1
                 source_stmt2mapping[ori_path] = []
+                print(f"{color.BOLD}{color.GREEN}CODE w.o. R: {ori_code}{color.END}")
 
         trans_stmt2mapping = {}
-        for ori_path in tqdm(trans_stmt_list):
+        for ori_id, ori_path in tqdm(enumerate(trans_stmt_list)):
+            if ori_id == 0:
+                continue
+            ori_code = this_trans_trees[ori_id].text
             depth = 0
             max_depth = 1000000000
             max_possible_choices = 1000000000
@@ -196,9 +191,12 @@ def run(model_names_for_mining, target_model_name, source_lang, target_lang, tas
                     save_new_rule(f'{task2_name}-new', ori_path, possible_maps_force_list)
                 possible_maps_list.extend(possible_maps_force_list)
             if possible_maps_list:
+                count3 += 1
                 trans_stmt2mapping[ori_path] = possible_maps_list
             else:
+                count4 += 1
                 trans_stmt2mapping[ori_path] = []
+                print(f"{color.BOLD}{color.GREEN}CODE w.o. R: {ori_code}{color.END}")
 
         M = {}
         for s_id in range(len(source_stmt_list)):
@@ -264,6 +262,13 @@ def run(model_names_for_mining, target_model_name, source_lang, target_lang, tas
                 this_mapping = k.split('-')
                 print(f'{this_mapping[0]};{this_mapping[1]}', file=f_map)
         f_map.close()
+
+        print(f"{color.BOLD}{color.BLUE}\ncount1--{count1}{color.END}")
+        print(f"{color.BOLD}{color.BLUE}count2--{count2}{color.END}")
+        print(f"{color.BOLD}{color.BLUE}rate--{round(count1 / (count1 + count2), 4)}{color.END}")
+        print(f"{color.BOLD}{color.BLUE}\ncount3--{count3}{color.END}")
+        print(f"{color.BOLD}{color.BLUE}count4--{count4}{color.END}")
+        print(f"{color.BOLD}{color.BLUE}rate--{round(count3 / (count3 + count4), 4)}{color.END}")
     return None, None, None, None
 
 
