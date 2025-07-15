@@ -453,6 +453,8 @@ def run(path_to_map, path_to_stmtmap, path_to_code, path_to_DATABASE, path_to_fi
                                     first_line = first_line.replace(f'int {this_use_var}[ ]', f'vector<int> {this_use_var}')
                                 elif f'int {this_use_var} [ ]' in first_line:
                                     first_line = first_line.replace(f'int {this_use_var} [ ]', f'vector<int> {this_use_var}')
+                                elif f'int * {this_use_var}' in first_line:
+                                    first_line = first_line.replace(f'int * {this_use_var}', f'vector<int> {this_use_var}')
                         if ori_first_line != first_line:
                             new_code_lines[0] = first_line
                             f_out = open(f'{save_fixcode_dir}/{ID}/{new_code_id}.{target_ext}', 'w')
