@@ -1,0 +1,127 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script src="lib/bindings/utils.js"></script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 1000px;
+                 background-color: #ffffff;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"borderWidth": 2, "font": {"color": "#333333"}, "group": 1, "id": "S_c2328ce6", "label": "AST Node Type: binary_expression\nCode for Example: d[N / 2 - 1] == d[N / 2]", "shape": "dot", "title": "AST Node Type: binary_expression\nCode for Example: d[N / 2 - 1] == d[N / 2]"}, {"borderWidth": 2, "font": {"color": "#333333"}, "group": 1, "id": "S_9f7d6a92", "label": "AST Node Type: array_access\nCode for Example: d[N / 2 - 1]", "shape": "dot", "title": "AST Node Type: array_access\nCode for Example: d[N / 2 - 1]"}, {"borderWidth": 2, "font": {"color": "#333333"}, "group": 1, "id": "S_bb26f4f1", "label": "AST Node Type: identifier\nCode for Example: d", "shape": "dot", "title": "AST Node Type: identifier\nCode for Example: d"}, {"borderWidth": 2, "font": {"color": "#333333"}, "group": 1, "id": "S_30c52a6c", "label": "AST Node Type: [\nCode for Example: [", "shape": "dot", "title": "AST Node Type: [\nCode for Example: ["}, {"borderWidth": 2, "font": {"color": "#333333"}, "group": 1, "id": "S_c3e9eb66", "label": "AST Node Type: binary_expression\nCode for Example: N / 2 - 1", "shape": "dot", "title": "AST Node Type: binary_expression\nCode for Example: N / 2 - 1"}, {"borderWidth": 2, "font": {"color": "#333333"}, "group": 1, "id": "S_eaafedd3", "label": "AST Node Type: binary_expression\nCode for Example: N / 2", "shape": "dot", "title": "AST Node Type: binary_expression\nCode for Example: N / 2"}, {"borderWidth": 2, "font": {"color": "#333333"}, "group": 1, "id": "S_fde4bba8", "label": "AST Node Type: identifier\nCode for Example: N", "shape": "dot", "title": "AST Node Type: identifier\nCode for Example: N"}, {"borderWidth": 2, "font": {"color": "#333333"}, "group": 1, "id": "S_ac110f9c", "label": "AST Node Type: /\nCode for Example: /", "shape": "dot", "title": "AST Node Type: /\nCode for Example: /"}, {"borderWidth": 2, "font": {"color": "#333333"}, "group": 1, "id": "S_0cc977a0", "label": "AST Node Type: decimal_integer_literal\nCode for Example: 2", "shape": "dot", "title": "AST Node Type: decimal_integer_literal\nCode for Example: 2"}, {"borderWidth": 2, "font": {"color": "#333333"}, "group": 1, "id": "S_97718888", "label": "AST Node Type: -\nCode for Example: -", "shape": "dot", "title": "AST Node Type: -\nCode for Example: -"}, {"borderWidth": 2, "font": {"color": "#333333"}, "group": 1, "id": "S_565b860f", "label": "AST Node Type: decimal_integer_literal\nCode for Example: 1", "shape": "dot", "title": "AST Node Type: decimal_integer_literal\nCode for Example: 1"}, {"borderWidth": 2, "font": {"color": "#333333"}, "group": 1, "id": "S_14783972", "label": "AST Node Type: ]\nCode for Example: ]", "shape": "dot", "title": "AST Node Type: ]\nCode for Example: ]"}, {"borderWidth": 2, "font": {"color": "#333333"}, "group": 1, "id": "S_3ee13277", "label": "AST Node Type: ==\nCode for Example: ==", "shape": "dot", "title": "AST Node Type: ==\nCode for Example: =="}, {"borderWidth": 2, "font": {"color": "#333333"}, "group": 1, "id": "S_4c4063d1", "label": "AST Node Type: array_access\nCode for Example: d[N / 2]", "shape": "dot", "title": "AST Node Type: array_access\nCode for Example: d[N / 2]"}, {"borderWidth": 2, "font": {"color": "#333333"}, "group": 1, "id": "S_44f1ef86", "label": "AST Node Type: identifier\nCode for Example: d", "shape": "dot", "title": "AST Node Type: identifier\nCode for Example: d"}, {"borderWidth": 2, "font": {"color": "#333333"}, "group": 1, "id": "S_91830096", "label": "AST Node Type: [\nCode for Example: [", "shape": "dot", "title": "AST Node Type: [\nCode for Example: ["}, {"borderWidth": 2, "font": {"color": "#333333"}, "group": 1, "id": "S_544294f3", "label": "AST Node Type: binary_expression\nCode for Example: N / 2", "shape": "dot", "title": "AST Node Type: binary_expression\nCode for Example: N / 2"}, {"borderWidth": 2, "font": {"color": "#333333"}, "group": 1, "id": "S_145a95d5", "label": "AST Node Type: identifier\nCode for Example: N", "shape": "dot", "title": "AST Node Type: identifier\nCode for Example: N"}, {"borderWidth": 2, "font": {"color": "#333333"}, "group": 1, "id": "S_b3305717", "label": "AST Node Type: /\nCode for Example: /", "shape": "dot", "title": "AST Node Type: /\nCode for Example: /"}, {"borderWidth": 2, "font": {"color": "#333333"}, "group": 1, "id": "S_59250ece", "label": "AST Node Type: decimal_integer_literal\nCode for Example: 2", "shape": "dot", "title": "AST Node Type: decimal_integer_literal\nCode for Example: 2"}, {"borderWidth": 2, "font": {"color": "#333333"}, "group": 1, "id": "S_abfaf875", "label": "AST Node Type: ]\nCode for Example: ]", "shape": "dot", "title": "AST Node Type: ]\nCode for Example: ]"}, {"borderWidth": 2, "font": {"color": "#333333"}, "group": 2, "id": "T_c9c201c0", "label": "AST Node Type: binary_expression\nCode for Example: d[N / 2 - 1] == d[N / 2]", "shape": "dot", "title": "AST Node Type: binary_expression\nCode for Example: d[N / 2 - 1] == d[N / 2]"}, {"borderWidth": 2, "font": {"color": "#333333"}, "group": 2, "id": "T_66c64fef", "label": "AST Node Type: subscript_expression\nCode for Example: d[N / 2 - 1]", "shape": "dot", "title": "AST Node Type: subscript_expression\nCode for Example: d[N / 2 - 1]"}, {"borderWidth": 2, "font": {"color": "#333333"}, "group": 2, "id": "T_a8092d31", "label": "AST Node Type: identifier\nCode for Example: d", "shape": "dot", "title": "AST Node Type: identifier\nCode for Example: d"}, {"borderWidth": 2, "font": {"color": "#333333"}, "group": 2, "id": "T_646aa60c", "label": "AST Node Type: [\nCode for Example: [", "shape": "dot", "title": "AST Node Type: [\nCode for Example: ["}, {"borderWidth": 2, "font": {"color": "#333333"}, "group": 2, "id": "T_5ee50e72", "label": "AST Node Type: binary_expression\nCode for Example: N / 2 - 1", "shape": "dot", "title": "AST Node Type: binary_expression\nCode for Example: N / 2 - 1"}, {"borderWidth": 2, "font": {"color": "#333333"}, "group": 2, "id": "T_5a054c45", "label": "AST Node Type: binary_expression\nCode for Example: N / 2", "shape": "dot", "title": "AST Node Type: binary_expression\nCode for Example: N / 2"}, {"borderWidth": 2, "font": {"color": "#333333"}, "group": 2, "id": "T_bebdcc2b", "label": "AST Node Type: identifier\nCode for Example: N", "shape": "dot", "title": "AST Node Type: identifier\nCode for Example: N"}, {"borderWidth": 2, "font": {"color": "#333333"}, "group": 2, "id": "T_a4946a69", "label": "AST Node Type: /\nCode for Example: /", "shape": "dot", "title": "AST Node Type: /\nCode for Example: /"}, {"borderWidth": 2, "font": {"color": "#333333"}, "group": 2, "id": "T_f96dff4c", "label": "AST Node Type: number_literal\nCode for Example: 2", "shape": "dot", "title": "AST Node Type: number_literal\nCode for Example: 2"}, {"borderWidth": 2, "font": {"color": "#333333"}, "group": 2, "id": "T_dec4dcd2", "label": "AST Node Type: -\nCode for Example: -", "shape": "dot", "title": "AST Node Type: -\nCode for Example: -"}, {"borderWidth": 2, "font": {"color": "#333333"}, "group": 2, "id": "T_cb519984", "label": "AST Node Type: number_literal\nCode for Example: 1", "shape": "dot", "title": "AST Node Type: number_literal\nCode for Example: 1"}, {"borderWidth": 2, "font": {"color": "#333333"}, "group": 2, "id": "T_6a0dc06f", "label": "AST Node Type: ]\nCode for Example: ]", "shape": "dot", "title": "AST Node Type: ]\nCode for Example: ]"}, {"borderWidth": 2, "font": {"color": "#333333"}, "group": 2, "id": "T_c2d62ce6", "label": "AST Node Type: ==\nCode for Example: ==", "shape": "dot", "title": "AST Node Type: ==\nCode for Example: =="}, {"borderWidth": 2, "font": {"color": "#333333"}, "group": 2, "id": "T_762dbeec", "label": "AST Node Type: subscript_expression\nCode for Example: d[N / 2]", "shape": "dot", "title": "AST Node Type: subscript_expression\nCode for Example: d[N / 2]"}, {"borderWidth": 2, "font": {"color": "#333333"}, "group": 2, "id": "T_c1a10c95", "label": "AST Node Type: identifier\nCode for Example: d", "shape": "dot", "title": "AST Node Type: identifier\nCode for Example: d"}, {"borderWidth": 2, "font": {"color": "#333333"}, "group": 2, "id": "T_a0db39db", "label": "AST Node Type: [\nCode for Example: [", "shape": "dot", "title": "AST Node Type: [\nCode for Example: ["}, {"borderWidth": 2, "font": {"color": "#333333"}, "group": 2, "id": "T_0fd8b868", "label": "AST Node Type: binary_expression\nCode for Example: N / 2", "shape": "dot", "title": "AST Node Type: binary_expression\nCode for Example: N / 2"}, {"borderWidth": 2, "font": {"color": "#333333"}, "group": 2, "id": "T_d4cbc1d2", "label": "AST Node Type: identifier\nCode for Example: N", "shape": "dot", "title": "AST Node Type: identifier\nCode for Example: N"}, {"borderWidth": 2, "font": {"color": "#333333"}, "group": 2, "id": "T_1a9c68e4", "label": "AST Node Type: /\nCode for Example: /", "shape": "dot", "title": "AST Node Type: /\nCode for Example: /"}, {"borderWidth": 2, "font": {"color": "#333333"}, "group": 2, "id": "T_d39604a4", "label": "AST Node Type: number_literal\nCode for Example: 2", "shape": "dot", "title": "AST Node Type: number_literal\nCode for Example: 2"}, {"borderWidth": 2, "font": {"color": "#333333"}, "group": 2, "id": "T_37b59672", "label": "AST Node Type: ]\nCode for Example: ]", "shape": "dot", "title": "AST Node Type: ]\nCode for Example: ]"}]);
+                  edges = new vis.DataSet([{"arrows": "to", "color": "#333333", "from": "S_c2328ce6", "to": "S_9f7d6a92", "width": 2}, {"arrows": "to", "color": "#333333", "from": "S_9f7d6a92", "to": "S_bb26f4f1", "width": 2}, {"arrows": "to", "color": "#333333", "from": "S_9f7d6a92", "to": "S_30c52a6c", "width": 2}, {"arrows": "to", "color": "#333333", "from": "S_9f7d6a92", "to": "S_c3e9eb66", "width": 2}, {"arrows": "to", "color": "#333333", "from": "S_c3e9eb66", "to": "S_eaafedd3", "width": 2}, {"arrows": "to", "color": "#333333", "from": "S_eaafedd3", "to": "S_fde4bba8", "width": 2}, {"arrows": "to", "color": "#333333", "from": "S_eaafedd3", "to": "S_ac110f9c", "width": 2}, {"arrows": "to", "color": "#333333", "from": "S_eaafedd3", "to": "S_0cc977a0", "width": 2}, {"arrows": "to", "color": "#333333", "from": "S_c3e9eb66", "to": "S_97718888", "width": 2}, {"arrows": "to", "color": "#333333", "from": "S_c3e9eb66", "to": "S_565b860f", "width": 2}, {"arrows": "to", "color": "#333333", "from": "S_9f7d6a92", "to": "S_14783972", "width": 2}, {"arrows": "to", "color": "#333333", "from": "S_c2328ce6", "to": "S_3ee13277", "width": 2}, {"arrows": "to", "color": "#333333", "from": "S_c2328ce6", "to": "S_4c4063d1", "width": 2}, {"arrows": "to", "color": "#333333", "from": "S_4c4063d1", "to": "S_44f1ef86", "width": 2}, {"arrows": "to", "color": "#333333", "from": "S_4c4063d1", "to": "S_91830096", "width": 2}, {"arrows": "to", "color": "#333333", "from": "S_4c4063d1", "to": "S_544294f3", "width": 2}, {"arrows": "to", "color": "#333333", "from": "S_544294f3", "to": "S_145a95d5", "width": 2}, {"arrows": "to", "color": "#333333", "from": "S_544294f3", "to": "S_b3305717", "width": 2}, {"arrows": "to", "color": "#333333", "from": "S_544294f3", "to": "S_59250ece", "width": 2}, {"arrows": "to", "color": "#333333", "from": "S_4c4063d1", "to": "S_abfaf875", "width": 2}, {"arrows": "to", "color": "#333333", "from": "T_c9c201c0", "to": "T_66c64fef", "width": 2}, {"arrows": "to", "color": "#333333", "from": "T_66c64fef", "to": "T_a8092d31", "width": 2}, {"arrows": "to", "color": "#333333", "from": "T_66c64fef", "to": "T_646aa60c", "width": 2}, {"arrows": "to", "color": "#333333", "from": "T_66c64fef", "to": "T_5ee50e72", "width": 2}, {"arrows": "to", "color": "#333333", "from": "T_5ee50e72", "to": "T_5a054c45", "width": 2}, {"arrows": "to", "color": "#333333", "from": "T_5a054c45", "to": "T_bebdcc2b", "width": 2}, {"arrows": "to", "color": "#333333", "from": "T_5a054c45", "to": "T_a4946a69", "width": 2}, {"arrows": "to", "color": "#333333", "from": "T_5a054c45", "to": "T_f96dff4c", "width": 2}, {"arrows": "to", "color": "#333333", "from": "T_5ee50e72", "to": "T_dec4dcd2", "width": 2}, {"arrows": "to", "color": "#333333", "from": "T_5ee50e72", "to": "T_cb519984", "width": 2}, {"arrows": "to", "color": "#333333", "from": "T_66c64fef", "to": "T_6a0dc06f", "width": 2}, {"arrows": "to", "color": "#333333", "from": "T_c9c201c0", "to": "T_c2d62ce6", "width": 2}, {"arrows": "to", "color": "#333333", "from": "T_c9c201c0", "to": "T_762dbeec", "width": 2}, {"arrows": "to", "color": "#333333", "from": "T_762dbeec", "to": "T_c1a10c95", "width": 2}, {"arrows": "to", "color": "#333333", "from": "T_762dbeec", "to": "T_a0db39db", "width": 2}, {"arrows": "to", "color": "#333333", "from": "T_762dbeec", "to": "T_0fd8b868", "width": 2}, {"arrows": "to", "color": "#333333", "from": "T_0fd8b868", "to": "T_d4cbc1d2", "width": 2}, {"arrows": "to", "color": "#333333", "from": "T_0fd8b868", "to": "T_1a9c68e4", "width": 2}, {"arrows": "to", "color": "#333333", "from": "T_0fd8b868", "to": "T_d39604a4", "width": 2}, {"arrows": "to", "color": "#333333", "from": "T_762dbeec", "to": "T_37b59672", "width": 2}, {"arrows": {"from": {"enabled": true}, "to": {"enabled": true}}, "color": "#9370DB", "font": {"bold": true, "color": "#6A0DAD", "size": 18}, "from": "S_c2328ce6", "label": "Translation Rule", "to": "T_c9c201c0", "width": 5}, {"arrows": {"from": {"enabled": true}, "to": {"enabled": true}}, "color": "red", "dashes": true, "from": "S_97718888", "label": "Link-1", "title": "Link between ASTs", "to": "T_dec4dcd2", "width": 3}, {"arrows": {"from": {"enabled": true}, "to": {"enabled": true}}, "color": "red", "dashes": true, "from": "S_565b860f", "label": "Link-2", "title": "Link between ASTs", "to": "T_cb519984", "width": 3}, {"arrows": {"from": {"enabled": true}, "to": {"enabled": true}}, "color": "red", "dashes": true, "from": "S_9f7d6a92", "label": "Link-3", "title": "Link between ASTs", "to": "T_66c64fef", "width": 3}, {"arrows": {"from": {"enabled": true}, "to": {"enabled": true}}, "color": "red", "dashes": true, "from": "S_bb26f4f1", "label": "Link-4", "title": "Link between ASTs", "to": "T_a8092d31", "width": 3}, {"arrows": {"from": {"enabled": true}, "to": {"enabled": true}}, "color": "red", "dashes": true, "from": "S_fde4bba8", "label": "Link-5", "title": "Link between ASTs", "to": "T_bebdcc2b", "width": 3}, {"arrows": {"from": {"enabled": true}, "to": {"enabled": true}}, "color": "red", "dashes": true, "from": "S_44f1ef86", "label": "Link-6", "title": "Link between ASTs", "to": "T_c1a10c95", "width": 3}, {"arrows": {"from": {"enabled": true}, "to": {"enabled": true}}, "color": "red", "dashes": true, "from": "S_145a95d5", "label": "Link-7", "title": "Link between ASTs", "to": "T_d4cbc1d2", "width": 3}, {"arrows": {"from": {"enabled": true}, "to": {"enabled": true}}, "color": "red", "dashes": true, "from": "S_30c52a6c", "label": "Link-8", "title": "Link between ASTs", "to": "T_646aa60c", "width": 3}, {"arrows": {"from": {"enabled": true}, "to": {"enabled": true}}, "color": "red", "dashes": true, "from": "S_91830096", "label": "Link-9", "title": "Link between ASTs", "to": "T_a0db39db", "width": 3}, {"arrows": {"from": {"enabled": true}, "to": {"enabled": true}}, "color": "red", "dashes": true, "from": "S_c3e9eb66", "label": "Link-10", "title": "Link between ASTs", "to": "T_5ee50e72", "width": 3}, {"arrows": {"from": {"enabled": true}, "to": {"enabled": true}}, "color": "red", "dashes": true, "from": "S_eaafedd3", "label": "Link-11", "title": "Link between ASTs", "to": "T_5a054c45", "width": 3}, {"arrows": {"from": {"enabled": true}, "to": {"enabled": true}}, "color": "red", "dashes": true, "from": "S_544294f3", "label": "Link-12", "title": "Link between ASTs", "to": "T_0fd8b868", "width": 3}, {"arrows": {"from": {"enabled": true}, "to": {"enabled": true}}, "color": "red", "dashes": true, "from": "S_ac110f9c", "label": "Link-13", "title": "Link between ASTs", "to": "T_a4946a69", "width": 3}, {"arrows": {"from": {"enabled": true}, "to": {"enabled": true}}, "color": "red", "dashes": true, "from": "S_b3305717", "label": "Link-14", "title": "Link between ASTs", "to": "T_1a9c68e4", "width": 3}, {"arrows": {"from": {"enabled": true}, "to": {"enabled": true}}, "color": "red", "dashes": true, "from": "S_0cc977a0", "label": "Link-15", "title": "Link between ASTs", "to": "T_f96dff4c", "width": 3}, {"arrows": {"from": {"enabled": true}, "to": {"enabled": true}}, "color": "red", "dashes": true, "from": "S_59250ece", "label": "Link-16", "title": "Link between ASTs", "to": "T_d39604a4", "width": 3}, {"arrows": {"from": {"enabled": true}, "to": {"enabled": true}}, "color": "red", "dashes": true, "from": "S_14783972", "label": "Link-17", "title": "Link between ASTs", "to": "T_6a0dc06f", "width": 3}, {"arrows": {"from": {"enabled": true}, "to": {"enabled": true}}, "color": "red", "dashes": true, "from": "S_abfaf875", "label": "Link-18", "title": "Link between ASTs", "to": "T_37b59672", "width": 3}, {"arrows": {"from": {"enabled": true}, "to": {"enabled": true}}, "color": "red", "dashes": true, "from": "S_3ee13277", "label": "Link-19", "title": "Link between ASTs", "to": "T_c2d62ce6", "width": 3}, {"arrows": {"from": {"enabled": true}, "to": {"enabled": true}}, "color": "red", "dashes": true, "from": "S_4c4063d1", "label": "Link-20", "title": "Link between ASTs", "to": "T_762dbeec", "width": 3}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {"nodes": {"font": {"size": 15, "color": "#555555", "face": "monospace"}, "size": 20, "borderWidth": 2, "borderColor": "#000000"}, "edges": {"color": "#666666", "width": 4, "arrows": {"to": {"enabled": true, "scaleFactor": 0.8}}, "smooth": {"type": "curvedCW", "roundness": 0.05}}, "layout": {"hierarchical": {"enabled": true, "direction": "UD", "sortMethod": "directed", "nodeSpacing": 250, "levelSeparation": 200, "treeSpacing": 1600}}, "physics": {"hierarchicalRepulsion": {"centralGravity": 0.0, "springLength": 100, "nodeDistance": 200}, "solver": "hierarchicalRepulsion"}, "interaction": {"dragNodes": true, "zoomView": true, "hover": true}};
+
+                  
+
+
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+
+                  
+
+
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>
